@@ -16,7 +16,6 @@ jobs:
         # with es como un parámetro del step
         with: 
           python-version: "3.13"
-          cache: "uv"
       - name: Install dependencies
         run: |
           uv add ruff
