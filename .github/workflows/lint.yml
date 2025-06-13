@@ -1,0 +1,24 @@
+name: 'Lint Python Code' # La pipeline tiene que tener un nombre
+on: # Cuándo se va a activar
+  push: # Only execute pipeline when someone pushes a commit to these branches
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint: # Name of the job
+    runs-on: ubuntu-latest
+    steps: # Cada guión es un step
+      - uses: actions/checkout@v4 # @v_numero es la versión
+      - uses: actions/setup-python@v5
+        # with es como un parámetro del step
+        with: 
+          python-version: "3.13"
+          cache: "uv"
+      - name: Install dependencies
+        run: |
+          uv add ruff
+      - name: Lint the project
+        run: ruff check --output-format=github
