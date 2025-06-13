@@ -18,6 +18,6 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: |
-          uv add ruff
+          python -m pip install ruff
       - name: Lint the project
         run: ruff check --output-format=github
