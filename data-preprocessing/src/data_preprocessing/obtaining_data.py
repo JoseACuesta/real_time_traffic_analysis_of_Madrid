@@ -99,17 +99,16 @@ def merge_traffic_and_pmed_ubicacion_data(
 
 
 def get_precipitation_data_from_aemet() -> pd.DataFrame:
-    def get_precipitation_data_from_aemet():
-        """This function checks if a local CSV file containing historical precipitation data exists.
-        If not, it fetches the data from the AEMET API in several date ranges, concatenates the results, removes duplicates,
-        and saves the data to a CSV file for future use.
-        If the file already exists, it loads the data directly from the CSV.
+    """This function checks if a local CSV file containing historical precipitation data exists.
+    If not, it fetches the data from the AEMET API in several date ranges, concatenates the results, removes duplicates,
+    and saves the data to a CSV file for future use.
+    If the file already exists, it loads the data directly from the CSV.
 
-        :return: DataFrame containing two columns: 'fecha' (date) and 'prec' (precipitation), with daily precipitation data for the specified station.
-        :rtype: pandas.DataFrame
+    :return: DataFrame containing two columns: 'fecha' (date) and 'prec' (precipitation), with daily precipitation data for the specified station.
+    :rtype: pandas.DataFrame
 
-        :raises: Prints error messages if there are issues with the API request or data retrieval.
-        """
+    :raises: Prints error messages if there are issues with the API request or data retrieval.
+    """
 
     load_dotenv()
 
