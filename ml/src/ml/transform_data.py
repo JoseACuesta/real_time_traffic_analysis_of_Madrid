@@ -1,5 +1,4 @@
 import polars as pl
-import numpy as np
 
 from pathlib import Path
 
@@ -67,6 +66,6 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
 
     return df
 
-def main():
-    df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/final_data.csv'))
-    df_transformed = transform_polars_dataframe(df)
+# def main():
+#     df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/final_data.csv'))
+#     df_transformed = transform_polars_dataframe(df)
