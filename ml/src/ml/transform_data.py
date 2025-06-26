@@ -1,6 +1,7 @@
 import polars as pl
 
 from pathlib import Path
+import os
 
 def raw_data_from_polars_dataframe(path: Path) -> pl.DataFrame:
     """
@@ -62,10 +63,22 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
         pl.col(c).cast(pl.Float32) for c in cols_to_convert
     ])
 
-    df = df.drop(['fecha', 'error'])
+    df = df.drop(['id', 'fecha', 'error', 'periodo_integracion']).remove(pl.col('tipo_elem') == 'C30')
 
     return df
 
-# def main():
-#     df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/final_data.csv'))
-#     df_transformed = transform_polars_dataframe(df)
+def dataframe_to_csv(df: pl.DataFrame, path: Path) -> pl.DataFrame:
+    if not os.path.exists(path):
+        df.write_csv(file=path)
+
+    df_ = pl.read_csv(source=path)
+    return df_
+
+def main():
+    df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.csv'))
+    df_transformed = transform_polars_dataframe(df=df)
+    final_df = dataframe_to_csv(df=df_transformed, path=Path('data/final_data.csv'))
+    print(final_df.columns)
+
+if __name__ == '__main__':
+    main()
