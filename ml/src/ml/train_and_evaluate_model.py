@@ -16,7 +16,8 @@ from sklearn.metrics import (
     root_mean_squared_error,
     r2_score
 )
-from dask.distributed import Client, LocalCluster
+
+# from dask.distributed import Client, LocalCluster
 
 from transform_data import raw_data_from_polars_dataframe, transform_polars_dataframe
 
@@ -93,10 +94,10 @@ def train_model(X_train_final: pl.DataFrame, y_train: pl.Series) -> RandomForest
     y_train = y_train.slice(0, 1_000_000).to_numpy()
     logger.info('y_train pasado a ndarray')
 
-    local_cluster = LocalCluster(n_workers=4,
-                                 threads_per_worker=1,
-                                 memory_limit='3GiB',
-                                 dashboard_address='8787')
+    # local_cluster = LocalCluster(n_workers=4,
+    #                              threads_per_worker=1,
+    #                              memory_limit='3GiB',
+    #                              dashboard_address='8787')
     
     #client = Client(local_cluster)
 
