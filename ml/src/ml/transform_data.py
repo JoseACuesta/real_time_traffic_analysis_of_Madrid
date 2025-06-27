@@ -66,14 +66,9 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
 
     return df
 
-def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
+def dataframe_to_parquet(df: pl.DataFrame, path: Path):
     if not os.path.exists(path):
         df.write_parquet(file=path)
 
     df_ = pl.read_parquet(source=path)
     return df_
-
-def main():
-    df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.csv'))
-    df_transformed = transform_polars_dataframe(df=df)
-    final_df = dataframe_to_parquet(df=df_transformed, path=Path('data/final_data.parquet'))
