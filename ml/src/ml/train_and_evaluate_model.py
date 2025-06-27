@@ -1,5 +1,5 @@
 import polars as pl
-import pandas as pd
+#import pandas as pd
 import numpy as np
 
 from pathlib import Path
@@ -97,7 +97,8 @@ def train_model(X_train_final: pl.DataFrame, y_train: pl.Series) -> RandomForest
                                  threads_per_worker=1,
                                  memory_limit='3GiB',
                                  dashboard_address='8787')
-    client = Client(local_cluster)
+    
+    #client = Client(local_cluster)
 
     rfr = RandomForestRegressor(n_jobs=-1)
 
