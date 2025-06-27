@@ -42,7 +42,6 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     
     df = df.with_columns([
         pl.col('fecha').dt.year().alias('year'),
-        pl.col('fecha').dt.month().alias('month'),
         pl.col('fecha').dt.day().alias('day'),
         pl.col('fecha').dt.weekday().alias('day_of_the_week')
     ])
@@ -58,27 +57,23 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
          
   ])
 
-    cols_to_convert = ['id', 'intensidad', 'ocupacion', 'carga', 'periodo_integracion', 'year', 'month', 'day', 'day_of_the_week', 'is_weekend']
-    df = df.with_columns([
-        pl.col(c).cast(pl.Float32) for c in cols_to_convert
-    ])
+    # cols_to_convert = ['id', 'intensidad', 'ocupacion', 'carga', 'periodo_integracion', 'year', 'day', 'day_of_the_week', 'is_weekend']
+    # df = df.with_columns([
+    #     pl.col(c).cast(pl.Float32) for c in cols_to_convert
+    # ])
 
-    df = df.drop(['id', 'fecha', 'error', 'periodo_integracion']).remove(pl.col('tipo_elem') == 'C30')
+    df = df.drop(['id', 'fecha', 'error', 'periodo_integracion']).remove(pl.col('tipo_elem') == 'C30').sort('day', 'hora', 'distrito', descending=[False, False, False])
 
     return df
 
-def dataframe_to_csv(df: pl.DataFrame, path: Path) -> pl.DataFrame:
+def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
     if not os.path.exists(path):
-        df.write_csv(file=path)
+        df.write_parquet(file=path)
 
-    df_ = pl.read_csv(source=path)
+    df_ = pl.read_parquet(source=path)
     return df_
 
 def main():
     df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.csv'))
     df_transformed = transform_polars_dataframe(df=df)
-    final_df = dataframe_to_csv(df=df_transformed, path=Path('data/final_data.csv'))
-    print(final_df.columns)
-
-if __name__ == '__main__':
-    main()
+    final_df = dataframe_to_parquet(df=df_transformed, path=Path('data/final_data.parquet'))
