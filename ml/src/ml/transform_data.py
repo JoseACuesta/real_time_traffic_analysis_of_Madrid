@@ -67,6 +67,18 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 def dataframe_to_parquet(df: pl.DataFrame, path: Path):
+    """
+    Converts a Polars DataFrame to a Parquet file at the specified path if it does not already exist,
+    then reads the Parquet file and returns it as a DataFrame.
+
+    :param df: The Polars DataFrame to be written to Parquet.
+    :type df: pl.DataFrame
+    :param path: The file system path where the Parquet file will be saved.
+    :type path: Path
+    :returns: The DataFrame read from the Parquet file at the specified path.
+    :rtype: pl.DataFrame
+    """
+
     if not os.path.exists(path):
         df.write_parquet(file=path)
 
