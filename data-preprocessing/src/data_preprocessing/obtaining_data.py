@@ -43,7 +43,7 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
         print(f"El fichero no existe en {path}")
         try:
             for file in glob.glob(literal_path):
-                df = pl.read_csv(source=file, separator=';', has_header=True, new_columns=columns, null_values="NaN")
+                df = pl.read_parquet(source=file, separator=';', has_header=True, new_columns=columns, null_values="NaN")
                 df = df.with_columns([
                 pl.col('fecha').str.split_exact(by=' ', n=1)
                 .struct.rename_fields(['fecha', 'hora'])
@@ -79,7 +79,9 @@ def get_data_from_pmed_ubicacion_file(path: Path) -> pl.DataFrame:
     measure_points_data = pl.read_csv(
         source=path, separator=';', has_header=True, encoding='utf8-lossy'
     )
-    df = measure_points_data.select(columns).drop_nulls()
+    df = measure_points_data.select(columns).filter(
+        pl.col('distrito') == 1.0
+        ).drop_nulls()
     return df
 
 
@@ -96,7 +98,7 @@ def merge_traffic_and_pmed_ubicacion_data(
     :return: Merged DataFrame containing data from both input DataFrames where 'id' matches.
     :rtype: pd.DataFrame
     """
-    df = traffic_data.join(other=pmed_data, on='id', how='left')
+    df = pmed_data.join(other=traffic_data, on='id', how='left')
     return df
 
 
@@ -211,7 +213,6 @@ def generate_final_dataframe():
     initial_traffic_data = generate_traffic_data_file(
         path=Path("data/traffic/historic_traffic_data_december.csv")
     )
-    print(initial_traffic_data.head())
     pmed_ubicacion_data = get_data_from_pmed_ubicacion_file(
         path=Path("data/pmed_ubicacion_04_2025.csv")
     )
@@ -220,5 +221,5 @@ def generate_final_dataframe():
     )
     precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.csv"))
     df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.csv'))
-    print(df)
+    print(df.shape)
     
