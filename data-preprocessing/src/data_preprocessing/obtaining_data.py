@@ -43,7 +43,7 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
         print(f"El fichero no existe en {path}")
         try:
             for file in glob.glob(literal_path):
-                df = pl.read_csv(source=file, separator=';', has_header=True, new_columns=columns, null_values="NaN")
+                df = pl.read_csv(source=file, separator=';', has_header=True, columns=columns, null_values="NaN")
                 df = df.with_columns([
                 pl.col('fecha').str.split_exact(by=' ', n=1)
                 .struct.rename_fields(['fecha', 'hora'])
@@ -54,14 +54,14 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
             df = pl.concat(data).unique()
 
             new_columns = columns + ["hora"]
-            df.select(new_columns).write_csv(path, separator=';')
+            df.select(new_columns).write_parquet(path)
             
             return df
 
         except OSError as error:
             print(f"Error: {error}")
 
-    df = pl.read_csv(path, separator=';')
+    df = pl.read_parquet(path)
     return df
 
 
@@ -143,7 +143,9 @@ def get_precipitation_data_from_aemet(path: Path) -> pl.DataFrame:
 
             ENDPOINT = f"/api/valores/climatologicos/diarios/datos/fechaini/{fechaIniStr}/fechafin/{fechaFinStr}/estacion/{IDEMA}"
             URL = BASE_URL + ENDPOINT
-            headers = {"Accept": "application/json", "api_key": API_KEY}
+            headers = {"Accept": "application/json", 
+                       "api_key": API_KEY,
+                       "Connection": "keep-alive"}
 
             try:
                 response = requests.get(URL, headers=headers, timeout=30)
@@ -171,7 +173,7 @@ def get_precipitation_data_from_aemet(path: Path) -> pl.DataFrame:
                 )
 
         main_dataframe = main_dataframe.unique()
-        main_dataframe.write_csv(file=path)
+        main_dataframe.write_parquet(file=path)
 
         df = main_dataframe.select([
             pl.col('fecha'),
@@ -179,7 +181,7 @@ def get_precipitation_data_from_aemet(path: Path) -> pl.DataFrame:
         ])
         return df
     
-    df = pl.read_csv(path).select([
+    df = pl.read_parquet(path).select([
         pl.col('fecha'),
         pl.col('prec').fill_null('0.0')
     ])
@@ -203,15 +205,15 @@ def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> pl
         df = df.join(other=aemet_data, on='fecha', how='left')
         df = df.sort(by=['id', 'fecha', 'hora'], descending=False)
         df = df.remove(pl.col('id') == 479309)
-        df.write_csv(file=path)
+        df.write_parquet(file=path)
         return df
     
-    return pl.read_csv(source=path)
+    return pl.read_parquet(source=path)
 
 
 def generate_final_dataframe():
     initial_traffic_data = generate_traffic_data_file(
-        path=Path("data/traffic/historic_traffic_data_december.csv")
+        path=Path("data/traffic/historic_traffic_data_december.parquet")
     )
     pmed_ubicacion_data = get_data_from_pmed_ubicacion_file(
         path=Path("data/pmed_ubicacion_04_2025.csv")
@@ -219,6 +221,6 @@ def generate_final_dataframe():
     data = merge_traffic_and_pmed_ubicacion_data(
         traffic_data=initial_traffic_data, pmed_data=pmed_ubicacion_data
     )
-    precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.csv"))
-    df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.csv'))
-    
+    precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.parquet"))  
+    df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.parquet'))
+    print(df)
