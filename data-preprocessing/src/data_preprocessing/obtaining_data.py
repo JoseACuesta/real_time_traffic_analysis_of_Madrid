@@ -221,5 +221,4 @@ def generate_final_dataframe():
     )
     precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.csv"))
     df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.csv'))
-    print(df.unique().shape)
     
