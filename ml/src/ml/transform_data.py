@@ -57,16 +57,11 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
          
   ])
 
-    # cols_to_convert = ['id', 'intensidad', 'ocupacion', 'carga', 'periodo_integracion', 'year', 'day', 'day_of_the_week', 'is_weekend']
-    # df = df.with_columns([
-    #     pl.col(c).cast(pl.Float32) for c in cols_to_convert
-    # ])
-
-    df = df.drop(['id', 'fecha', 'error', 'periodo_integracion']).remove(pl.col('tipo_elem') == 'C30').sort('day', 'hora', 'distrito', descending=[False, False, False])
+    df = df.drop(['id', 'fecha', 'error', 'periodo_integracion']).remove(pl.col('tipo_elem') == 'C30').sort('year', 'day', 'hora', descending=[False, False, False])
 
     return df
 
-def dataframe_to_parquet(df: pl.DataFrame, path: Path):
+def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
     """
     Converts a Polars DataFrame to a Parquet file at the specified path if it does not already exist,
     then reads the Parquet file and returns it as a DataFrame.
@@ -84,3 +79,14 @@ def dataframe_to_parquet(df: pl.DataFrame, path: Path):
 
     df_ = pl.read_parquet(source=path)
     return df_
+
+def main_transform_data() -> pl.DataFrame:
+    raw_df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.csv'))
+    df_transformed = transform_polars_dataframe(raw_df)
+    df_parquet = dataframe_to_parquet(df=df_transformed, path=Path('data/final_data.parquet'))
+    print(df_parquet)
+    print(df_parquet.shape)
+
+
+if __name__ == '__main__':
+    main_transform_data()
