@@ -43,7 +43,7 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
         print(f"El fichero no existe en {path}")
         try:
             for file in glob.glob(literal_path):
-                df = pl.read_parquet(source=file, separator=';', has_header=True, new_columns=columns, null_values="NaN")
+                df = pl.read_csv(source=file, separator=';', has_header=True, new_columns=columns, null_values="NaN")
                 df = df.with_columns([
                 pl.col('fecha').str.split_exact(by=' ', n=1)
                 .struct.rename_fields(['fecha', 'hora'])
@@ -221,5 +221,5 @@ def generate_final_dataframe():
     )
     precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.csv"))
     df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.csv'))
-    print(df.shape)
+    print(df.unique().shape)
     
