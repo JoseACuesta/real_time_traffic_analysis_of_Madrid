@@ -6,10 +6,11 @@ from pathlib import Path
 import json
 import joblib
 import logging
+import os
 
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.metrics import (
     mean_absolute_error, 
     mean_squared_error, 
@@ -17,15 +18,29 @@ from sklearn.metrics import (
     r2_score
 )
 
-# from dask.distributed import Client, LocalCluster
+from dask.distributed import Client, LocalCluster
 
 from transform_data import raw_data_from_polars_dataframe, transform_polars_dataframe
 
 logger = logging.getLogger(__name__)
 
-def split_train_and_test_data(df: pl.DataFrame):
+def get_validation_data(df:pl.DataFrame, validation_data_path:Path, test_train_path:Path) -> tuple[pl.DataFrame, pl.DataFrame]:
+    if not os.path.exists(validation_data_path) or not os.path.exists(test_train_path):
+        is_2024 = df['year'] == 2024
+        validation_data = df.filter(is_2024)
+        train_test_data = df.filter(~is_2024)
+
+        validation_data.write_parquet(file=validation_data_path)
+        train_test_data.write_parquet(file=test_train_path)
     
-    is_2023 = df['year'] == 2023.0
+    validation_data = pl.read_parquet(source=validation_data_path)
+    test_train_data = pl.read_parquet(source=test_train_path)
+
+    return validation_data, test_train_data
+
+def split_train_and_test_data(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame, pl.Series, pl.Series]:
+    
+    is_2023 = df['year'] == 2023
 
     X = df.drop('carga')
     y = df['carga']
@@ -90,33 +105,26 @@ def normalize_and_scale_data_polars(X_train: pl.DataFrame, X_test: pl.DataFrame)
 
 def train_model(X_train_final: pl.DataFrame, y_train: pl.Series) -> RandomForestRegressor:
 
-    X_train = X_train_final.slice(0, 1_000_000).to_numpy() # El método fit de Random Forest Regressor de sklearn necesita que sea MatrixLike
-    y_train = y_train.slice(0, 1_000_000).to_numpy()
+    X_train = X_train_final.to_numpy() # El método fit de Random Forest Regressor de sklearn necesita que sea MatrixLike
+    y_train = y_train.to_numpy()
     logger.info('y_train pasado a ndarray')
 
-    # local_cluster = LocalCluster(n_workers=4,
-    #                              threads_per_worker=1,
-    #                              memory_limit='3GiB',
-    #                              dashboard_address='8787')
+    local_cluster = LocalCluster(n_workers=4,
+                                 threads_per_worker=1,
+                                 memory_limit='3GiB',
+                                 dashboard_address='8787')
     
-    #client = Client(local_cluster)
+    client = Client(local_cluster)
 
-    rfr = RandomForestRegressor(n_jobs=-1)
+    rfr = RandomForestRegressor(criterion='absolute_error', n_jobs=-1)
 
     param_grid = {
         'n_estimators': [100, 150, 200],
-        'max_depth': [10, 15, 20],
-        'min_samples_leaf': [20, 30]
+        'max_depth': [2, 3, 4, 5]
     }
     
     logger.info('Instancia de RFR creada')
-    grid = RandomizedSearchCV(param_distributions=param_grid,
-                              estimator=rfr,
-                              n_iter=8,
-                              cv=3,
-                              scoring='neg_mean_absolute_error',
-                              n_jobs=-1,
-                              random_state=42)
+    grid = GridSearchCV(param_grid=param_grid, estimator=rfr, n_jobs=-1)
     
     logger.info('Iniciando entrenamiento')
 
@@ -130,23 +138,26 @@ def train_model(X_train_final: pl.DataFrame, y_train: pl.Series) -> RandomForest
 
 def test_model(best_model: RandomForestRegressor, X_test_final: pl.DataFrame, y_test: pl.Series):
     
-    y_test = y_test.slice(0, 200_000).to_numpy()
+    y_test = y_test.to_numpy()
     logger.info('y_test pasado a ndarray')
 
-    X_test = X_test_final.slice(0, 200_000).to_numpy()
+    X_test = X_test_final.to_numpy()
     y_pred = best_model.predict(X_test)
     logger.info('prediccion obtenida')
+    score = best_model.score(X_test, y_test)
 
     RFR_MAE = np.round(mean_absolute_error(y_test, y_pred), 2)
     RFR_MSE = np.round(mean_squared_error(y_test, y_pred), 2)
     RFR_RMSE = np.round(root_mean_squared_error(y_test, y_pred), 2)
     RFR_R2 = np.round(r2_score(y_test, y_pred), 2)
+    RFR_SCORE = np.round(score, 2)
 
     data = {
         'RFR_MAE': RFR_MAE,
         'RFR_MSE': RFR_MSE,
         'RFR_RMSE': RFR_RMSE,
-        'RFR_R2': RFR_R2
+        'RFR_R2': RFR_R2,
+        'RFR_SCORE': RFR_SCORE
     }
 
     with open('data/metrics.json', mode='w') as metrics:
@@ -155,7 +166,12 @@ def test_model(best_model: RandomForestRegressor, X_test_final: pl.DataFrame, y_
 def main():
     df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.csv'))
     df_transformed = transform_polars_dataframe(df)
-    X_train, X_test, y_train, y_test = split_train_and_test_data(df_transformed)
+    validation_data, test_train_data = get_validation_data(
+        df=df_transformed,
+        validation_data_path=Path('data/validation_data.parquet'),
+        test_train_path=Path('data/test_train_data.parquet')
+    )
+    X_train, X_test, y_train, y_test = split_train_and_test_data(test_train_data)
     X_train_final, X_test_final = normalize_and_scale_data_polars(X_train, X_test)
     best_model = train_model(X_train_final, y_train)
     test_model(best_model, X_test_final, y_test)
