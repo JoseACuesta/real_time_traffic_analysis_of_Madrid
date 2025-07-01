@@ -201,7 +201,7 @@ def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> pl
 
     if not os.path.exists(path):
         df = df.join(other=aemet_data, on='fecha', how='left')
-        df = df.sort(by=['id', 'fecha'], descending=False)
+        df = df.sort(by=['id', 'fecha', 'hora'], descending=False)
         df = df.remove(pl.col('id') == 479309)
         df.write_csv(file=path)
         return df
