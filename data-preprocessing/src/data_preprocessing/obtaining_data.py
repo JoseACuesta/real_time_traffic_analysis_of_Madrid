@@ -80,7 +80,7 @@ def get_data_from_pmed_ubicacion_file(path: Path) -> pl.DataFrame:
         source=path, separator=';', has_header=True, encoding='utf8-lossy'
     )
     df = measure_points_data.select(columns).filter(
-        pl.col('distrito') == 1.0
+        pl.col('distrito') == 3.0
         ).drop_nulls()
     return df
 
