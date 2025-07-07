@@ -12,7 +12,7 @@ def raw_data_from_polars_dataframe(path: Path) -> pl.DataFrame:
     :returns: A Polars DataFrame containing the data from the CSV file with all rows containing null values removed.
     :rtype: pl.DataFrame
     """
-    df = pl.read_csv(source=path, has_header=True, separator=',')
+    df = pl.read_parquet(source=path)
     df = df.drop_nulls()
     return df
 
@@ -81,7 +81,7 @@ def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
     return df_
 
 def main_transform_data() -> pl.DataFrame:
-    raw_df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.csv'))
+    raw_df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.parquet'))
     df_transformed = transform_polars_dataframe(raw_df)
     df_parquet = dataframe_to_parquet(df=df_transformed, path=Path('data/final_data.parquet'))
     print(df_parquet)
