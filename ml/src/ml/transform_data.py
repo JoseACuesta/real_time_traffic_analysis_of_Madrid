@@ -87,6 +87,5 @@ def main_transform_data() -> pl.DataFrame:
     print(df_parquet)
     print(df_parquet.shape)
 
-
 if __name__ == '__main__':
     main_transform_data()
