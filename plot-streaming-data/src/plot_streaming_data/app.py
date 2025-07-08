@@ -1,6 +1,4 @@
-import numpy as np
 import pandas as pd
-import polars as pl
 
 from pathlib import Path
 import os
@@ -8,7 +6,6 @@ import threading
 import time
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, udf
 from pyspark.sql.types import StructType, StructField, FloatType, IntegerType
 
 import streamlit as st
