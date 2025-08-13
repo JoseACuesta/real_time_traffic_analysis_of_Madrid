@@ -1,32 +1,37 @@
 import polars as pl
-from minio import Minio
+
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 import os
-from dotenv import load_dotenv
 from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
 
-def connect_to_minio() -> Minio:
-
-    load_dotenv()
-
-    minio_service = os.getenv('MINIO_SERVICE')
-    minio_access_key = os.getenv('MINIO_ACCESS_KEY')
-    minio_secret_key = os.getenv('MINIO_SECRET_KEY')
-
-    client = Minio(
-        minio_service,
-        access_key=minio_access_key,
-        secret_key=minio_secret_key,
-        secure=False
-    )
+def split_train_validation_and_test_data(
+    df: pl.DataFrame, train_validation_data_path: Path, test_data_path: Path
+) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.Series]:
+    """
+    Splits the input DataFrame into train/validation and test datasets based on the 'year' column,
+    saves them as Parquet files if they do not already exist, and returns the relevant datasets.
+    If the Parquet files specified by `train_validation_data_path` and `test_data_path` do not exist,
+    the function splits the data such that all rows with 'year' == 2024 are used as test data,
+    and the rest as train/validation data. The splits are saved to the provided file paths.
+    If the files exist, they are loaded directly.
+    :param df: The input Polars DataFrame containing the data to be split.
+    :type df: pl.DataFrame
+    :param train_validation_data_path: The file path where the train/validation data Parquet file is or will be stored.
+    :type train_validation_data_path: Path
+    :param test_data_path: The file path where the test data Parquet file is or will be stored.
+    :type test_data_path: Path
+    :returns: 
+        - test_data (pl.DataFrame): The test dataset (rows where 'year' == 2024).
+        - train_validation_data (pl.DataFrame): The train/validation dataset (rows where 'year' != 2024).
+        - X_test (pl.DataFrame): The test features (test_data without the 'carga' column).
+        - y_test (pl.Series): The test target variable (the 'carga' column from test_data).
+    :rtype: tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.Series]
+    """
     
-    return client
-
-def split_train_validation_and_test_data(df:pl.DataFrame, train_validation_data_path:Path, test_data_path:Path) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame, pl.Series]:
     if not os.path.exists(train_validation_data_path) or not os.path.exists(test_data_path):
         test_data = df.filter(pl.col('year') == 2024)
         train_validation_data = df.filter(pl.col('year') != 2024)
@@ -43,6 +48,17 @@ def split_train_validation_and_test_data(df:pl.DataFrame, train_validation_data_
     return test_data, train_validation_data, X_test, y_test
 
 def split_train_and_validation_data(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame, pl.Series, pl.Series]:
+    """
+    Splits the input DataFrame into train and validation datasets based on the 'year' column.
+    :param df: The input Polars DataFrame containing the data to be split.
+    :type df: pl.DataFrame
+    :returns: 
+        - X_train (pl.DataFrame): The train features (rows where 'year' != 2023).
+        - X_val (pl.DataFrame): The validation features (rows where 'year' == 2023).
+        - y_train (pl.Series): The train target variable.
+        - y_val (pl.Series): The validation target variable.
+    :rtype: tuple[pl.DataFrame, pl.DataFrame, pl.Series, pl.Series]
+    """
     
     is_2023 = df['year'] == 2023
 
@@ -58,6 +74,23 @@ def split_train_and_validation_data(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.
     return X_train, X_val, y_train, y_val
 
 def normalize_and_scale_train_and_val_data(X_train: pl.DataFrame, X_val: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """
+    Normalizes and scales the training and validation datasets by applying one-hot encoding to categorical columns
+    and standard scaling to numerical columns.
+    This function separates categorical and numerical columns from the input Polars DataFrames, applies one-hot encoding
+    to the categorical columns, and standard scaling to the numerical columns. The transformed columns are then concatenated
+    back together to form the final processed DataFrames for both training and validation sets.
+    :param X_train: The training dataset containing both categorical and numerical columns.
+    :type X_train: pl.DataFrame
+    :param X_val: The validation dataset containing both categorical and numerical columns.
+    :type X_val: pl.DataFrame
+    :returns:
+        - X_train_final: The processed training DataFrame, with categorical columns one-hot encoded
+        and numerical columns scaled.
+        - X_test_final: The processed validation DataFrame, with columns one-hot encoded
+        and numerical columns scaled.
+    :rtype: tuple[pl.DataFrame, pl.DataFrame]
+    """
 
     logging.basicConfig(filename='train_and_evaluate_model.log', format='%(asctime)s %(message)s', level=logging.INFO)
 
@@ -108,6 +141,19 @@ def normalize_and_scale_train_and_val_data(X_train: pl.DataFrame, X_val: pl.Data
     return X_train_final, X_val_final
 
 def normalize_and_scale_test_data(X_test: pl.DataFrame) -> pl.DataFrame:
+    """
+    Normalizes and scales the test data by applying one-hot encoding to categorical columns
+    and standard scaling to numerical columns.
+    This function separates the categorical and numerical columns from the input Polars DataFrame,
+    applies one-hot encoding to the categorical columns, and standard scaling to the numerical columns.
+    The transformed columns are then concatenated and returned as a new Polars DataFrame.
+    :param X_test: The input test data as a Polars DataFrame. It should contain both categorical (string) and
+        numerical (integer or float) columns.
+    :type X_test: pl.DataFrame    
+    :return: A Polars DataFrame with categorical columns one-hot encoded and numerical columns standardized.
+    :rtype: pl.DataFrame
+        
+    """
 
     logging.basicConfig(filename='train_and_evaluate_model.log', format='%(asctime)s %(message)s', level=logging.INFO)
 
