@@ -80,7 +80,7 @@ def store_model_at_minio(
     model_bytes = onnx.SerializeToString()
     model_buffer = io.BytesIO(model_bytes)
 
-    MODEL_ID = 'RandomForestRegressor' if type(model) == RandomForestRegressor else 'XGBRegressor'
+    MODEL_ID = 'RandomForestRegressor' if isinstance(model, RandomForestRegressor) else 'XGBRegressor'
 
     minio_client.put_object(
         bucket_name=bucket,
