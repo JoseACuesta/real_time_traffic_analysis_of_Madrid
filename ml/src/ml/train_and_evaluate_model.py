@@ -1,9 +1,7 @@
 import polars as pl
 import numpy as np
-from minio import Minio, error
-from skl2onnx import to_onnx
+from minio import Minio
 import onnxruntime as rt
-from skl2onnx.common.data_types import FloatTensorType
 
 from pathlib import Path
 import json
@@ -12,7 +10,7 @@ import os
 import io
 
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import (
     mean_absolute_error, 
     mean_squared_error, 
@@ -20,8 +18,13 @@ from sklearn.metrics import (
     r2_score
 )
 
-from utils import (
+from ml.minio_client import (
     connect_to_minio,
+    download_model_from_minio,
+    store_model_at_minio
+)
+
+from ml.utils import (
     split_train_validation_and_test_data,
     split_train_and_validation_data,
     normalize_and_scale_train_and_val_data,
@@ -33,6 +36,29 @@ logger = logging.getLogger(__name__)
 def train_and_evaluate_model(
     X_train_final: pl.DataFrame, X_val_final: pl.DataFrame, y_train: pl.Series, y_val: pl.Series
 ) -> tuple[RandomForestRegressor, np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict, dict]:
+    """
+    Trains a Random Forest Regressor using randomized hyperparameter search and evaluates its performance on a validation set.
+    This function converts the provided training and validation data from Polars DataFrames and Series to NumPy arrays,
+    performs hyperparameter optimization using RandomizedSearchCV, fits the best model, evaluates it on the validation set,
+    and saves the predictions and true values to a CSV file. It returns the trained model, processed data, best parameters, and evaluation metrics.
+    :param X_train_final: The training features as a Polars DataFrame.
+    :type X_train_final: pl.DataFrame
+    :param X_val_final: The validation features as a Polars DataFrame.
+    :type X_val_final: pl.DataFrame 
+    :param y_train: The training target values as a Polars Series.
+    :type y_train: pl.Series
+    :param y_val: The validation target values as a Polars Series.
+    :type y_val: pl.Series
+    :returns:
+        - best_model: The trained Random Forest Regressor with the best found hyperparameters.
+        - X_train: The training features as a NumPy array.
+        - X_val: The validation features as a NumPy array.
+        - y_train: The training target values as a NumPy array.
+        - y_val: The validation target values as a NumPy array.
+        - params_: The best hyperparameters found during randomized search.
+        - model_metrics: Dictionary containing evaluation metrics: MAE, MSE, RMSE, and R2 score.
+    :rtype: tuple[RandomForestRegressor, np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict, dict]
+    """
 
     X_train = X_train_final.to_numpy() # El método fit de Random Forest Regressor de sklearn necesita que sea MatrixLike
     y_train = y_train.to_numpy()
@@ -113,113 +139,21 @@ def train_and_evaluate_model(
     
     return best_model, X_train, X_val, y_train, y_val, params_, model_metrics
 
-def store_model(
-    model: RandomForestRegressor,
-    X_train: np.ndarray,
-    X_val: np.ndarray,
-    y_train: np.ndarray,
-    y_val: np.ndarray,
-    params_: dict,
-    model_metrics: dict,
-    minio_client: Minio
-) -> None:
-    
-    bucket = os.getenv('RFR_MINIO_BUCKET')
-    if not minio_client.bucket_exists(bucket_name=bucket):
-        minio_client.make_bucket(bucket_name=bucket)
-
-    initial_type = [('input', FloatTensorType([None, X_train.shape[1]]))]
-    onnx = to_onnx(model=model, initial_types=initial_type)
-    model_bytes = onnx.SerializeToString()
-    model_buffer = io.BytesIO(model_bytes)
-
-    MODEL_ID = 'RandomForestRegressor'
-
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/model.onnx',
-        data=model_buffer,
-        length=len(model_bytes),
-        content_type="application/train_and_val/octet-stream"
-    )
-
-    csv_buffer = io.StringIO()
-    np.savetxt(csv_buffer, X_train, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
-    csv_io = io.BytesIO(csv_bytes)
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/X_train.csv',
-        data=csv_io,
-        length=len(csv_bytes),
-        content_type='text/csv'
-    )
-
-    np.savetxt(csv_buffer, X_val, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
-    csv_io = io.BytesIO(csv_bytes)
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/X_val.csv',
-        data=csv_io,
-        length=len(csv_bytes),
-        content_type='text/csv'
-    )
-
-    np.savetxt(csv_buffer, y_train, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
-    csv_io = io.BytesIO(csv_bytes)
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/y_train.csv',
-        data=csv_io,
-        length=len(csv_bytes),
-        content_type='text/csv'
-    )
-
-    np.savetxt(csv_buffer, y_val, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
-    csv_io = io.BytesIO(csv_bytes)
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/y_val.csv',
-        data=csv_io,
-        length=len(csv_bytes),
-        content_type='text/csv'
-    )
-
-    serialized_model_params = json.dumps(params_).encode('utf-8')
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/model_params.json',
-        data=io.BytesIO(serialized_model_params),
-        length=len(serialized_model_params),
-        content_type='application/json'
-    )
-
-    serialized_model_metrics = json.dumps(model_metrics).encode('utf-8')
-    minio_client.put_object(
-        bucket_name=bucket,
-        object_name=f'{MODEL_ID}/train_and_val/model_metrics.json',
-        data=io.BytesIO(serialized_model_metrics),
-        length=len(serialized_model_metrics),
-        content_type='application/json'
-    )
-    
-def download_model_from_minio(minio_client: Minio) -> rt.InferenceSession:
-    
-    bucket = os.getenv('RFR_MINIO_BUCKET')
-    MODEL_ID = 'RandomForestRegressor'
-
-    try:
-        onnx_model = minio_client.get_object(bucket_name=bucket, object_name=f'{MODEL_ID}/train_and_val/model.onnx').data
-    except error.S3Error:
-        raise ValueError(f'Model not found for {MODEL_ID}/train_and_val/model.onnx')
-    infses = rt.InferenceSession(onnx_model, providers=['CPUExecutionProvider'])
-    
-    return infses
-
 def test_model(best_model: rt.InferenceSession, X_test_final: pl.DataFrame, y_test: pl.Series, minio_client: Minio) -> np.ndarray:
+    """
+    Tests a trained ONNX model on the provided test dataset, computes evaluation metrics, saves metrics to MinIO, 
+    and optionally writes predictions and true values to a CSV file.
+    :param best_model: The ONNX runtime inference session for the trained model.
+    :type best_model: rt.InferenceSession
+    :param X_test_final: The test features as a Polars DataFrame.
+    :type X_test_final: pl.DataFrame
+    :param y_test: The true target values for the test set as a Polars Series.
+    :type y_test: pl.Series
+    :param minio_client: The MinIO client used to upload the model metrics.
+    :type minio_client: Minio
+    :return: The predicted values for the test set.
+    :rtype: np.ndarray
+    """
     
     y_test = y_test.to_numpy()
     logger.info('y_val pasado a ndarray')
@@ -317,7 +251,7 @@ def main():
             y_train=y_train,
             y_val=y_val)
         
-        store_model(
+        store_model_at_minio(
             model=rfr,
             X_train=X_train,
             X_val=X_val,

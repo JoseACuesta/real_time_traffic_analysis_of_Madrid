@@ -148,7 +148,7 @@ def normalize_and_scale_test_data(X_test: pl.DataFrame) -> pl.DataFrame:
     applies one-hot encoding to the categorical columns, and standard scaling to the numerical columns.
     The transformed columns are then concatenated and returned as a new Polars DataFrame.
     :param X_test: The input test data as a Polars DataFrame. It should contain both categorical (string) and
-        numerical (integer or float) columns.
+    numerical (integer or float) columns.
     :type X_test: pl.DataFrame    
     :return: A Polars DataFrame with categorical columns one-hot encoded and numerical columns standardized.
     :rtype: pl.DataFrame
