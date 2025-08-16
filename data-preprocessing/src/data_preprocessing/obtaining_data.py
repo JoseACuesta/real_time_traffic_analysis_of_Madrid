@@ -9,6 +9,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+from data_preprocessing.aemet_client import get_precipitation_data_from_aemet
+
 
 def generate_traffic_data_file(path: Path) -> pl.DataFrame:
     """
@@ -102,92 +104,6 @@ def merge_traffic_and_pmed_ubicacion_data(
     return df
 
 
-def get_precipitation_data_from_aemet(path: Path) -> pl.DataFrame:
-    """This function checks if a local CSV file containing historical precipitation data exists.
-    If not, it fetches the data from the AEMET API in several date ranges, concatenates the results, removes duplicates,
-    and saves the data to a CSV file for future use.
-    If the file already exists, it loads the data directly from the CSV.
-
-    :param path: The file path to the CSV file containing historical precipitation data.
-    :type path: Path
-    :return: DataFrame containing two columns: 'fecha' (date) and 'prec' (precipitation), with daily precipitation data for the specified station.
-    :rtype: pl.DataFrame
-
-    :raises: Prints error messages if there are issues with the API request or data retrieval.
-    """
-
-    load_dotenv()
-
-    main_dataframe = pl.DataFrame()
-
-    dates = [
-        "2021-01-01T00:00:00UTC",
-        "2021-07-01T00:00:00UTC",
-        "2022-01-01T00:00:00UTC",
-        "2022-07-01T00:00:00UTC",
-        "2023-01-01T00:00:00UTC",
-        "2023-07-01T00:00:00UTC",
-        "2024-01-01T00:00:00UTC",
-        "2024-07-01T00:00:00UTC",
-        "2025-01-01T00:00:00UTC"
-    ]
-
-    API_KEY = os.getenv("AEMET_API_KEY")
-    BASE_URL = "https://opendata.aemet.es/opendata"
-    IDEMA = "3195"
-
-    if not path.exists():
-        for i in range(len(dates) - 1):
-            fechaIniStr = dates[i]
-            fechaFinStr = dates[i+1]
-
-            ENDPOINT = f"/api/valores/climatologicos/diarios/datos/fechaini/{fechaIniStr}/fechafin/{fechaFinStr}/estacion/{IDEMA}"
-            URL = BASE_URL + ENDPOINT
-            headers = {"Accept": "application/json", 
-                       "api_key": API_KEY,
-                       "Connection": "keep-alive"}
-
-            try:
-                response = requests.get(URL, headers=headers, timeout=30)
-                data = response.json()
-
-                if data.get('datos') is not None:
-                    weather_data = data['datos']
-                    file = urllib.request.urlopen(weather_data)
-                    file_content = file.read()
-                    weather_data_json = json.loads(file_content)
-                    secondary_dataframe = pl.DataFrame(data=weather_data_json)
-                    main_dataframe = pl.concat(
-                        [main_dataframe, secondary_dataframe], how='diagonal'
-                    )
-                    secondary_dataframe = pl.DataFrame()
-                    time.sleep(5)
-                else:
-                    print(
-                        f"No se encontró la clave 'datos' en la respuesta para fechas {fechaIniStr} a {fechaFinStr}"
-                    )
-                    print(f"Error {response.status_code}: {response.text}")
-            except Exception as e:
-                print(
-                    f"Error durante la solicitud para {fechaIniStr} a {fechaFinStr}: {e}"
-                )
-
-        main_dataframe = main_dataframe.unique()
-        main_dataframe.write_parquet(file=path)
-
-        df = main_dataframe.select([
-            pl.col('fecha'),
-            pl.col('prec').fill_null('0.0')
-        ])
-        return df
-    
-    df = pl.read_parquet(path).select([
-        pl.col('fecha'),
-        pl.col('prec').fill_null('0.0')
-    ])
-    return df
-
-
 def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> pl.DataFrame:
     """
     Merges the input DataFrame with AEMET weather data, sorts the result, and saves it to a CSV file.
@@ -209,18 +125,3 @@ def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> pl
         return df
     
     return pl.read_parquet(source=path)
-
-
-def generate_final_dataframe():
-    initial_traffic_data = generate_traffic_data_file(
-        path=Path("data/traffic/historic_traffic_data_december.parquet")
-    )
-    pmed_ubicacion_data = get_data_from_pmed_ubicacion_file(
-        path=Path("data/pmed_ubicacion_04_2025.csv")
-    )
-    data = merge_traffic_and_pmed_ubicacion_data(
-        traffic_data=initial_traffic_data, pmed_data=pmed_ubicacion_data
-    )
-    precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.parquet"))  
-    df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.parquet'))
-    print(df)
