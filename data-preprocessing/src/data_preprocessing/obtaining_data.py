@@ -96,17 +96,15 @@ def merge_traffic_and_pmed_ubicacion_data(
     return df
 
 
-def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> pl.DataFrame:
+def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> None:
     """
-    Merges the input DataFrame with AEMET weather data, sorts the result, and saves it to a CSV file.
+    Merges the input DataFrame with AEMET weather data, sorts the result, and saves it to a parquet file.
 
     :param df: The main DataFrame containing traffic data, with a 'fecha' column.
     :type df: pl.DataFrame
     :param aemet_data: The DataFrame containing AEMET weather data, also with a 'fecha' column.
     :type aemet_data: pl.DataFrame
     :param path: Path to the output CSV file where the processed DataFrame will be saved or loaded from.
-    :return: The merged and sorted DataFrame containing both traffic and weather data.
-    :rtype: pd.DataFrame
     """
 
     if not os.path.exists(path):
@@ -114,6 +112,5 @@ def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> pl
         df = df.sort(by=['id', 'fecha', 'hora'], descending=False)
         df = df.remove(pl.col('id') == 479309)
         df.write_parquet(file=path)
-        return df
     
-    return pl.read_parquet(source=path)
+    return

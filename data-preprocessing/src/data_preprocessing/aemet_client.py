@@ -69,7 +69,6 @@ def get_precipitation_data_from_aemet(path: Path) -> pl.DataFrame:
         
         aemet_dataframe = pl.concat(items=list_aemet_data)
         aemet_dataframe = aemet_dataframe.unique()
-        aemet_dataframe.write_csv(file=Path('data/historic_aemet_data.csv'))
         aemet_dataframe.write_parquet(file=path)
 
         return aemet_dataframe

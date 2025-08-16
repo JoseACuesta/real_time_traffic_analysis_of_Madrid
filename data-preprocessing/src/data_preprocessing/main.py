@@ -20,7 +20,7 @@ def main():
         traffic_data=initial_traffic_data, pmed_data=pmed_ubicacion_data
     )
     precipitation_data = get_precipitation_data_from_aemet(path=Path("data/historic_aemet_data.parquet"))
-    df = get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.parquet'))
+    get_final_data(df=data, aemet_data=precipitation_data, path=Path('data/provisional_final_data.parquet'))
 
 if __name__ == "__main__":
     main()
