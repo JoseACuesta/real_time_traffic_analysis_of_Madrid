@@ -1,16 +1,8 @@
 import pandas as pd
 import polars as pl
-import requests
-import urllib
-import json
-import time
 import glob
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-
-from data_preprocessing.aemet_client import get_precipitation_data_from_aemet
-
 
 def generate_traffic_data_file(path: Path) -> pl.DataFrame:
     """
