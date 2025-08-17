@@ -90,7 +90,7 @@ def store_model_at_minio(
 
         minio_client.put_object(
             bucket_name=bucket,
-            object_name=f'/train_and_val/model.onnx',
+            object_name='/train_and_val/model.onnx',
             data=model_buffer,
             length=len(model_bytes),
             content_type="application/train_and_val/octet-stream"
@@ -115,7 +115,7 @@ def store_model_at_minio(
 
         minio_client.put_object(
             bucket_name=bucket,
-            object_name=f'/train_and_val/model.onnx',
+            object_name='/train_and_val/model.onnx',
             data=onnx_buffer,
             length=len(onnx_bytes),
             content_type="application/train_and_val/octet-stream"
@@ -128,7 +128,7 @@ def store_model_at_minio(
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name=f'/train_and_val/X_train.csv',
+        object_name='/train_and_val/X_train.csv',
         data=csv_io,
         length=len(csv_bytes),
         content_type='text/csv'
@@ -139,7 +139,7 @@ def store_model_at_minio(
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name=f'/train_and_val/X_val.csv',
+        object_name='/train_and_val/X_val.csv',
         data=csv_io,
         length=len(csv_bytes),
         content_type='text/csv'
@@ -150,7 +150,7 @@ def store_model_at_minio(
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name=f'/train_and_val/y_train.csv',
+        object_name='/train_and_val/y_train.csv',
         data=csv_io,
         length=len(csv_bytes),
         content_type='text/csv'
@@ -161,7 +161,7 @@ def store_model_at_minio(
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name=f'/train_and_val/y_val.csv',
+        object_name='/train_and_val/y_val.csv',
         data=csv_io,
         length=len(csv_bytes),
         content_type='text/csv'
@@ -170,7 +170,7 @@ def store_model_at_minio(
     serialized_model_params = json.dumps(params_).encode('utf-8')
     minio_client.put_object(
         bucket_name=bucket,
-        object_name=f'/train_and_val/model_params.json',
+        object_name='/train_and_val/model_params.json',
         data=io.BytesIO(serialized_model_params),
         length=len(serialized_model_params),
         content_type='application/json'
@@ -179,7 +179,7 @@ def store_model_at_minio(
     serialized_model_metrics = json.dumps(model_metrics).encode('utf-8')
     minio_client.put_object(
         bucket_name=bucket,
-        object_name=f'/train_and_val/model_metrics.json',
+        object_name='/train_and_val/model_metrics.json',
         data=io.BytesIO(serialized_model_metrics),
         length=len(serialized_model_metrics),
         content_type='application/json'
@@ -198,9 +198,9 @@ def download_model_from_minio(model: RandomForestRegressor | XGBRegressor,  mini
     bucket = os.environ.get('RFR_MINIO_BUCKET') if isinstance(model, RandomForestRegressor) else os.environ.get('XGBOOST_BUCKET')
         
     try:
-        onnx_model = minio_client.get_object(bucket_name=bucket, object_name=f'/train_and_val/model.onnx').data
+        onnx_model = minio_client.get_object(bucket_name=bucket, object_name='/train_and_val/model.onnx').data
     except error.S3Error:
-        raise ValueError(f'Model not found for /train_and_val/model.onnx')
+        raise ValueError('Model not found for /train_and_val/model.onnx')
     infses = rt.InferenceSession(onnx_model, providers=['CPUExecutionProvider'])
         
     return infses
