@@ -5,7 +5,7 @@ def initialise_rfr_streaming():
     """
     Initializes a Spark session to simulate streaming data processing.
     This function sets up a local Spark session, defines a schema for the input data,
-    reads CSV files in streaming mode from the 'data/file_sink/' directory, and writes
+    reads CSV files in streaming mode from the 'data/RandomForestRegressor/file_sink/' directory, and writes
     the results to the console in continuous update mode.
     :raises pyspark.sql.utils.StreamingQueryException: If an error occurs during streaming execution.
     """
@@ -41,7 +41,7 @@ def initialise_xgboost_streaming():
     """
     Initializes a Spark session to simulate streaming data processing.
     This function sets up a local Spark session, defines a schema for the input data,
-    reads CSV files in streaming mode from the 'data/file_sink/' directory, and writes
+    reads CSV files in streaming mode from the 'data/XGBoost/file_sink/' directory, and writes
     the results to the console in continuous update mode.
     :raises pyspark.sql.utils.StreamingQueryException: If an error occurs during streaming execution.
     """
