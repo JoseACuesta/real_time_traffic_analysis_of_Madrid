@@ -107,6 +107,9 @@ def train_and_evaluate_model(
         'MIN_SAMPLES_LEAF': BEST_MODEL_MIN_SAMPLES_LEAF,
         'MIN_SAMPLES_SPLIT': BEST_MODEL_MIN_SAMPLES_SPLIT
     }
+
+    with open(file=Path('data/metrics/Random Forest/best_params.json'), mode='w') as f:
+        json.dump(params_, f)
     
     logger.info('Empezando validación')
     y_pred = best_model.predict(X_val)
@@ -124,6 +127,9 @@ def train_and_evaluate_model(
         'RFR_RMSE': RFR_RMSE,
         'RFR_R2': RFR_R2
     }
+
+    with open(file=Path('data/metrics/Random Forest/validation_metrics.json'), mode='w') as f:
+        json.dump(model_metrics, f)
 
     ys_train_and_val_path = Path('../../../plot-streaming-data/src/plot_streaming_data/data/RandomForestRegressor/val')
     if not os.path.exists(ys_train_and_val_path):

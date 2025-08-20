@@ -85,6 +85,9 @@ def train_and_evaluate_model(
         'LEARNING_RATE': BEST_MODEL_LEARNING_RATE
     }
 
+    with open(file=Path('data/metrics/XGBoost/best_params.json'), mode='w') as f:
+        json.dump(params_, f)
+
     logger.info('Empezando validación')
     y_pred = best_model.predict(X_val)
     logger.info('Validación terminada')
@@ -101,6 +104,9 @@ def train_and_evaluate_model(
         'RFR_RMSE': RFR_RMSE,
         'RFR_R2': RFR_R2
     }
+
+    with open(file=Path('data/metrics/XGBoost/validation_metrics.json'), mode='w') as f:
+        json.dump(model_metrics, f)
 
     ys_train_and_val_path = Path('../../../plot-streaming-data/src/plot_streaming_data/data/XGBoost/val')
     if not os.path.exists(ys_train_and_val_path):
