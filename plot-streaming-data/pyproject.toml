@@ -1,8 +1,7 @@
 [project]
 name = "plot-streaming-data"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Plot streaming data"
 authors = [
     { name = "Jose", email = "jacbj42@gmail.com" }
 ]
@@ -17,9 +16,12 @@ dependencies = [
     "streamlit>=1.46.1",
 ]
 
-[project.scripts]
-plot-streaming-data = "plot_streaming_data:main"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/plot_streaming_data/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plot_streaming_data"]
