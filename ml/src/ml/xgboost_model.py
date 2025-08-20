@@ -37,7 +37,29 @@ logger = logging.getLogger(__name__)
 def train_and_evaluate_model(
     X_train_final: pl.DataFrame, X_val_final: pl.DataFrame, y_train: pl.Series, y_val: pl.Series
 ) -> tuple[XGBRegressor, np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict, dict]:
-    
+    """
+    Trains a XGBoost Regressor using grided hyperparameter search and evaluates its performance on a validation set.
+    This function converts the provided training and validation data from Polars DataFrames and Series to NumPy arrays,
+    performs hyperparameter optimization using GridSearchCV, fits the best model, evaluates it on the validation set,
+    and saves the predictions and true values to a CSV file. It returns the trained model, processed data, best parameters, and evaluation metrics.
+    :param X_train_final: The training features as a Polars DataFrame.
+    :type X_train_final: pl.DataFrame
+    :param X_val_final: The validation features as a Polars DataFrame.
+    :type X_val_final: pl.DataFrame 
+    :param y_train: The training target values as a Polars Series.
+    :type y_train: pl.Series
+    :param y_val: The validation target values as a Polars Series.
+    :type y_val: pl.Series
+    :returns:
+        - best_model: The trained XGBoost Regressor with the best found hyperparameters.
+        - X_train: The training features as a NumPy array.
+        - X_val: The validation features as a NumPy array.
+        - y_train: The training target values as a NumPy array.
+        - y_val: The validation target values as a NumPy array.
+        - params_: The best hyperparameters found during randomized search.
+        - model_metrics: Dictionary containing evaluation metrics: MAE, MSE, RMSE, and R2 score.
+    :rtype: tuple[XGBRegressor, np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict, dict]
+    """
     X_train = X_train_final.to_numpy()
     y_train = y_train.to_numpy()
 
@@ -124,7 +146,20 @@ def train_and_evaluate_model(
     return best_model, X_train, X_val, y_train, y_val, params_, model_metrics
 
 def test_model(best_model: rt.InferenceSession, X_test_final: pl.DataFrame, y_test: pl.Series, minio_client: Minio) -> np.ndarray:
-    
+    """
+    Tests a trained ONNX model on the provided test dataset, computes evaluation metrics, saves metrics to MinIO, 
+    and optionally writes predictions and true values to a CSV file.
+    :param best_model: The ONNX runtime inference session for the trained model.
+    :type best_model: rt.InferenceSession
+    :param X_test_final: The test features as a Polars DataFrame.
+    :type X_test_final: pl.DataFrame
+    :param y_test: The true target values for the test set as a Polars Series.
+    :type y_test: pl.Series
+    :param minio_client: The MinIO client used to upload the model metrics.
+    :type minio_client: Minio
+    :return: The predicted values for the test set.
+    :rtype: np.ndarray
+    """
     y_test = y_test.to_numpy()
     logger.info('y_val pasado a ndarray')
 
@@ -175,53 +210,77 @@ def test_model(best_model: rt.InferenceSession, X_test_final: pl.DataFrame, y_te
         
     return y_pred
 
-def main():
+def pipeline_xgboost():
     
+    OBJECTS_CONTAINED_IN_BUCKET = 8
+
     df = pl.read_parquet(source=Path('data/final_data.parquet'))
 
     minio_client = connect_to_minio()
 
-    test_data, train_validation_data, X_test, y_test = split_train_validation_and_test_data(
+    bucket = os.environ.get('XGBOOST_BUCKET')
+
+    objects = minio_client.list_objects(bucket_name=bucket, recursive=True)
+    object_list = list(objects)
+
+    if (minio_client.bucket_exists(bucket_name=bucket)) and (len(object_list) == OBJECTS_CONTAINED_IN_BUCKET):
+        test_data, train_validation_data, X_test, y_test = split_train_validation_and_test_data(
+        df=df,
+        train_validation_data_path=Path('data/train_validation_data.parquet'),
+        test_data_path=Path('data/test_data.parquet')
+    )
+        X_test_final = normalize_and_scale_test_data(X_test=X_test)
+
+        infsess = download_model_from_minio(
+            model=xgb,
+            minio_client=minio_client)
+
+        test_model(
+            best_model=infsess,
+            X_test_final = X_test_final,
+            y_test=y_test,
+            minio_client=minio_client)   
+         
+    else:
+        test_data, train_validation_data, X_test, y_test = split_train_validation_and_test_data(
             df=df,
             train_validation_data_path=Path('data/train_validation_data.parquet'),
             test_data_path=Path('data/test_data.parquet')
         )
 
-    X_train, X_val, y_train, y_val = split_train_and_validation_data(df=train_validation_data)
+        X_train, X_val, y_train, y_val = split_train_and_validation_data(df=train_validation_data)
 
-    X_train_final, X_val_final = normalize_and_scale_train_and_val_data(X_train=X_train, X_val=X_val)
+        X_train_final, X_val_final = normalize_and_scale_train_and_val_data(X_train=X_train, X_val=X_val)
 
-    xgb, X_train, X_val, y_train, y_val, params_, model_metrics = train_and_evaluate_model(
-        X_train_final=X_train_final,
-        X_val_final=X_val_final,
-        y_train=y_train,
-        y_val=y_val)
+        xgb, X_train, X_val, y_train, y_val, params_, model_metrics = train_and_evaluate_model(
+            X_train_final=X_train_final,
+            X_val_final=X_val_final,
+            y_train=y_train,
+            y_val=y_val)
         
-    X_test_final = normalize_and_scale_test_data(X_test=X_test)
+        X_test_final = normalize_and_scale_test_data(X_test=X_test)
 
-    store_model_at_minio(
-        model=xgb,
-        X_train=X_train,
-        X_val=X_val,
-        y_train=y_train,
-        y_val=y_val,
-        minio_client=minio_client,
-        params_=params_,
-        model_metrics=model_metrics
+        store_model_at_minio(
+            model=xgb,
+            X_train=X_train,
+            X_val=X_val,
+            y_train=y_train,
+            y_val=y_val,
+            minio_client=minio_client,
+            params_=params_,
+            model_metrics=model_metrics
         )
     
-    infsess = download_model_from_minio(
-        model = xgb,
-        minio_client=minio_client
-    )
+        infsess = download_model_from_minio(
+            model = xgb,
+            minio_client=minio_client
+        )
 
-    y_pred = test_model(
-        best_model=infsess,
-        X_test_final = X_test_final,
-        y_test=y_test,
-        minio_client=minio_client)
-        
-    print(y_pred)
+        y_pred = test_model(
+            best_model=infsess,
+            X_test_final = X_test_final,
+            y_test=y_test,
+            minio_client=minio_client)
     
 if __name__ == "__main__":
-    main()
+    pipeline_xgboost()

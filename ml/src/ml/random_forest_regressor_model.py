@@ -211,19 +211,19 @@ def test_model(best_model: rt.InferenceSession, X_test_final: pl.DataFrame, y_te
         
     return y_pred
 
-def main():
+def pipeline_rfr():
 
-    #OBJECTS_CONTAINED_IN_BUCKET = 8
+    OBJECTS_CONTAINED_IN_BUCKET = 8
 
     df = pl.read_parquet(source=Path('data/final_data.parquet'))
 
     minio_client = connect_to_minio()
 
     bucket = os.environ.get('RFR_MINIO_BUCKET')
-    # objects = minio_client.list_objects(bucket_name=bucket, recursive=True)
-    # object_list = list(objects)
+    objects = minio_client.list_objects(bucket_name=bucket, recursive=True)
+    object_list = list(objects)
 
-    if (minio_client.bucket_exists(bucket_name=bucket)): # or (len(object_list != 0)):
+    if (minio_client.bucket_exists(bucket_name=bucket)) and (len(object_list) == OBJECTS_CONTAINED_IN_BUCKET):
         test_data, train_validation_data, X_test, y_test = split_train_validation_and_test_data(
         df=df,
         train_validation_data_path=Path('data/train_validation_data.parquet'),
@@ -280,8 +280,6 @@ def main():
             X_test_final = X_test_final,
             y_test=y_test,
             minio_client=minio_client)
-        
-        print(y_pred)
     
 if __name__ == "__main__":
-    main()
+    pipeline_rfr()
