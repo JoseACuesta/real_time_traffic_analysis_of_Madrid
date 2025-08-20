@@ -1,8 +1,7 @@
 [project]
 name = "ml"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "ML package"
 authors = [
     { name = "Jose", email = "jacbj42@gmail.com" }
 ]
@@ -22,8 +21,11 @@ dependencies = [
     "xgboost>=3.0.4",
 ]
 
-[project.scripts]
-ml = "ml:main"
+[tool.hatch.version]
+path = "src/ml/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ml"]
 
 [build-system]
 requires = ["hatchling"]
