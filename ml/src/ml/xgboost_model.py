@@ -107,7 +107,12 @@ def train_and_evaluate_model(
         'LEARNING_RATE': BEST_MODEL_LEARNING_RATE
     }
 
-    with open(file=Path('data/metrics/XGBoost/best_params.json'), mode='w') as f:
+    best_params_path = Path('datasets/metrics/XGBoost')
+    best_params_file = Path('datasets/metrics/XGBoost/model_params.json')
+    if not os.path.exists(best_params_path):
+        os.makedirs(name=best_params_path, exist_ok=True)
+
+    with open(file=best_params_file, mode='w') as f:
         json.dump(params_, f)
 
     logger.info('Empezando validación')
@@ -127,7 +132,12 @@ def train_and_evaluate_model(
         'RFR_R2': RFR_R2
     }
 
-    with open(file=Path('data/metrics/XGBoost/validation_metrics.json'), mode='w') as f:
+    model_metrics_path = Path('datasets/metrics/XGBoost')
+    model_metrics_file = Path('datasets/metrics/XGBoost/validation_metrics.json')
+    if not os.path.exists(model_metrics_path):
+        os.makedirs(name=model_metrics_path, exist_ok=True)
+
+    with open(file=model_metrics_file, mode='w') as f:
         json.dump(model_metrics, f)
 
     ys_train_and_val_path = Path('../../../plot-streaming-data/src/plot_streaming_data/data/XGBoost/val')
@@ -214,7 +224,7 @@ def pipeline_xgboost():
     
     OBJECTS_CONTAINED_IN_BUCKET = 8
 
-    df = pl.read_parquet(source=Path('data/final_data.parquet'))
+    df = pl.read_parquet(source=Path('datasets/final_data.parquet'))
 
     minio_client = connect_to_minio()
 
@@ -226,26 +236,28 @@ def pipeline_xgboost():
     if (minio_client.bucket_exists(bucket_name=bucket)) and (len(object_list) == OBJECTS_CONTAINED_IN_BUCKET):
         test_data, train_validation_data, X_test, y_test = split_train_validation_and_test_data(
         df=df,
-        train_validation_data_path=Path('data/train_validation_data.parquet'),
-        test_data_path=Path('data/test_data.parquet')
+        train_validation_data_path=Path('datasets/train_validation_data.parquet'),
+        test_data_path=Path('datasets/test_data.parquet')
     )
         X_test_final = normalize_and_scale_test_data(X_test=X_test)
 
         infsess = download_model_from_minio(
-            model=xgb,
+            model='xgb',
             minio_client=minio_client)
 
-        test_model(
+        y_pred= test_model(
             best_model=infsess,
             X_test_final = X_test_final,
             y_test=y_test,
-            minio_client=minio_client)   
+            minio_client=minio_client)
+        
+        print(y_pred)
          
     else:
         test_data, train_validation_data, X_test, y_test = split_train_validation_and_test_data(
             df=df,
-            train_validation_data_path=Path('data/train_validation_data.parquet'),
-            test_data_path=Path('data/test_data.parquet')
+            train_validation_data_path=Path('datasets/train_validation_data.parquet'),
+            test_data_path=Path('datasets/test_data.parquet')
         )
 
         X_train, X_val, y_train, y_val = split_train_and_validation_data(df=train_validation_data)

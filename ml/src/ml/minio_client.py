@@ -5,6 +5,7 @@ import os
 import io
 import numpy as np
 import json
+from typing import Literal
 
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
@@ -185,7 +186,7 @@ def store_model_at_minio(
         content_type='application/json'
     )
     
-def download_model_from_minio(model: RandomForestRegressor | XGBRegressor,  minio_client: Minio) -> rt.InferenceSession: 
+def download_model_from_minio(minio_client: Minio, model: Literal['rfr', 'xgb'] = 'rfr') -> rt.InferenceSession: 
     """
     Downloads an ONNX model from a MinIO bucket and loads it into an ONNX Runtime InferenceSession.
     :param minio_client: An instance of the Minio client used to interact with the MinIO object storage.
@@ -195,7 +196,7 @@ def download_model_from_minio(model: RandomForestRegressor | XGBRegressor,  mini
     :raises ValueError: If the specified model file is not found in the MinIO bucket.
     """
     
-    bucket = os.environ.get('RFR_MINIO_BUCKET') if isinstance(model, RandomForestRegressor) else os.environ.get('XGBOOST_BUCKET')
+    bucket = os.environ.get('RFR_MINIO_BUCKET') if model == 'rfr' else os.environ.get('XGBOOST_BUCKET')
         
     try:
         onnx_model = minio_client.get_object(bucket_name=bucket, object_name='/train_and_val/model.onnx').data

@@ -74,6 +74,7 @@ def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
     :rtype: pl.DataFrame
     """
 
+
     if not os.path.exists(path):
         df.write_parquet(file=path)
 
@@ -83,7 +84,7 @@ def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
 def main_transform_data() -> pl.DataFrame:
     raw_df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.parquet'))
     df_transformed = transform_polars_dataframe(raw_df)
-    df_parquet = dataframe_to_parquet(df=df_transformed, path=Path('data/final_data.parquet'))
+    df_parquet = dataframe_to_parquet(df=df_transformed, path=Path('datasets/final_data.parquet'))
     print(df_parquet)
     print(df_parquet.shape)
 
