@@ -58,7 +58,7 @@ def plot_rfr_data_plotly():
                 fig.update_layout(
                 xaxis_title="Muestra",
                 yaxis_title="Valor",
-                title="Predicción vs Real (Streaming)",
+                title="Predicted vs Actual Traffic Values",
                 showlegend=True
                 )
 
@@ -122,7 +122,7 @@ def plot_xgboost_data_plotly():
                 fig.update_layout(
                 xaxis_title="Muestra",
                 yaxis_title="Valor",
-                title="Predicción vs Real (Streaming)",
+                title="Predicted vs Actual Traffic Values",
                 showlegend=True
                 )
 

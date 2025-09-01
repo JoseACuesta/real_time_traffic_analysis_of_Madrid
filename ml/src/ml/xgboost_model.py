@@ -182,16 +182,16 @@ def test_model(best_model: rt.InferenceSession, X_test_final: pl.DataFrame, y_te
     logger.info('Validación terminada')
     logger.info('prediccion obtenida')
 
-    RFR_MAE = np.round(mean_absolute_error(y_test, y_pred), 2)
-    RFR_MSE = np.round(mean_squared_error(y_test, y_pred), 2)
-    RFR_RMSE = np.round(root_mean_squared_error(y_test, y_pred), 2)
-    RFR_R2 = np.round(r2_score(y_test, y_pred), 2)
+    XGBR_MAE = np.round(mean_absolute_error(y_test, y_pred), 2)
+    XGBR_MSE = np.round(mean_squared_error(y_test, y_pred), 2)
+    XGBR_RMSE = np.round(root_mean_squared_error(y_test, y_pred), 2)
+    XGBR_R2 = np.round(r2_score(y_test, y_pred), 2)
 
     data = {
-        'RFR_MAE': RFR_MAE,
-        'RFR_MSE': RFR_MSE,
-        'RFR_RMSE': RFR_RMSE,
-        'RFR_R2': RFR_R2
+        'XGBR_MAE': XGBR_MAE,
+        'XGBR_MSE': XGBR_MSE,
+        'XGBR_RMSE': XGBR_RMSE,
+        'XGBR_R2': XGBR_R2
     }
 
     bucket = os.getenv('XGBOOST_BUCKET')
@@ -284,7 +284,7 @@ def pipeline_xgboost():
         )
     
         infsess = download_model_from_minio(
-            model = xgb,
+            model = 'xgb',
             minio_client=minio_client
         )
 

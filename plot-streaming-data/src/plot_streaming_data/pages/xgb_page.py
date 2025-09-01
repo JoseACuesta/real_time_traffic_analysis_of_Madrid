@@ -8,7 +8,7 @@ from plot_streaming_data.utils.spark_client import initialise_xgboost_streaming
 
 from plot_streaming_data.utils.plot_real_time_data import plot_xgboost_data_plotly
 
-st.set_page_config(layout='centered')
+st.title('XGBoost Regressor Prediction')
 
 split_xgboost_prediction_data_file_into_streaming_directory(
     file_path=Path('data/XGBoost/test/ys_test.csv'),

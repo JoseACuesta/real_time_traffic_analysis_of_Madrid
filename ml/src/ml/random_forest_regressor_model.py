@@ -281,7 +281,7 @@ def pipeline_rfr():
         X_test_final = normalize_and_scale_test_data(X_test=X_test)
 
         infsess = download_model_from_minio(
-            model=rfr,
+            model='rfr',
             minio_client=minio_client
         )
 
