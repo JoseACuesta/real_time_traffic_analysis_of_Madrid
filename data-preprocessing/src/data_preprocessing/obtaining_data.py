@@ -32,6 +32,8 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
         "error",
         "periodo_integracion",
     ]
+
+    os.makedirs('data/traffic/', exist_ok=True)
     
     if not os.path.exists(path):
         print(f"El fichero no existe en {path}")
