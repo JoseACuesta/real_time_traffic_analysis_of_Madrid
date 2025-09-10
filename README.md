@@ -13,7 +13,7 @@ This README file outlines the setup required to run the project, provides instru
 
 # Quick Start
 
-The files required to run this project can be found in the following [GitHub repository](https://github.com/JoseACuesta/TFM_data.git)
+The .parquet and .csv files required to run this project can be found in the following [GitHub repository](https://github.com/JoseACuesta/TFM_data.git)
 
 The README.md file specifies the directory in which each file should be located.
 
