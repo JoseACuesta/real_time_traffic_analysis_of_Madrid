@@ -1,0 +1,27 @@
+[project]
+name = "real-time-traffic-analysis-of-madrid-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+    "minio>=7.2.20",
+    "numpy>=2.5.1",
+    "onnxmltools>=1.16.0",
+    "onnxruntime>=1.27.0",
+    "pandas>=3.0.3",
+    "plotly>=6.9.0",
+    "polars>=1.42.1",
+    "pyarrow>=24.0.0",
+    "pyspark>=4.1.2",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "ruff>=0.15.21",
+    "scikit-learn>=1.9.0",
+    "scipy>=1.18.0",
+    "skl2onnx>=1.20.0",
+    "streamlit>=1.59.1",
+    "urllib3>=2.7.0",
+    "xgboost>=3.3.0",
+]
