@@ -17,6 +17,7 @@ from skl2onnx.common.shape_calculator import calculate_linear_regressor_output_s
 import onnxmltools
 from onnxmltools.convert.xgboost.operator_converters.XGBoost import convert_xgboost
 
+
 def connect_to_minio() -> Minio:
     """
     Establishes a connection to a MinIO object storage server using credentials loaded from environment variables.
@@ -29,20 +30,21 @@ def connect_to_minio() -> Minio:
 
     load_dotenv()
 
-    minio_service = os.environ.get('MINIO_SERVICE')
-    minio_access_key = os.environ.get('MINIO_ACCESS_KEY')
-    minio_secret_key = os.environ.get('MINIO_SECRET_KEY')
+    minio_service = os.environ.get("MINIO_SERVICE")
+    minio_access_key = os.environ.get("MINIO_ACCESS_KEY")
+    minio_secret_key = os.environ.get("MINIO_SECRET_KEY")
 
     client = Minio(
         minio_service,
         access_key=minio_access_key,
         secret_key=minio_secret_key,
-        secure=False
+        secure=False,
     )
-    
+
     return client
 
-def store_model_at_minio( 
+
+def store_model_at_minio(
     model: RandomForestRegressor | XGBRegressor,
     X_train: np.ndarray,
     X_val: np.ndarray,
@@ -50,7 +52,7 @@ def store_model_at_minio(
     y_val: np.ndarray,
     params_: dict,
     model_metrics: dict,
-    minio_client: Minio
+    minio_client: Minio,
 ) -> None:
     """
     Stores a trained machine learning model, its training/validation data, parameters, and metrics in a MinIO bucket.
@@ -77,26 +79,29 @@ def store_model_at_minio(
     :raises Exception: If there is an error during serialization or upload to MinIO.
     :return: None
     """
-    
-    bucket = os.environ.get('RFR_MINIO_BUCKET') if isinstance(model, RandomForestRegressor) else os.getenv('XGBOOST_BUCKET')
+
+    bucket = (
+        os.environ.get("RFR_MINIO_BUCKET")
+        if isinstance(model, RandomForestRegressor)
+        else os.getenv("XGBOOST_BUCKET")
+    )
     if not minio_client.bucket_exists(bucket_name=bucket):
         minio_client.make_bucket(bucket_name=bucket)
 
     if isinstance(model, RandomForestRegressor):
-
-        initial_type = [('input', FloatTensorType([None, X_train.shape[1]]))]
+        initial_type = [("input", FloatTensorType([None, X_train.shape[1]]))]
         onnx = to_onnx(model=model, initial_types=initial_type)
         model_bytes = onnx.SerializeToString()
         model_buffer = io.BytesIO(model_bytes)
 
         minio_client.put_object(
             bucket_name=bucket,
-            object_name='/train_and_val/model.onnx',
+            object_name="/train_and_val/model.onnx",
             data=model_buffer,
             length=len(model_bytes),
-            content_type="application/train_and_val/octet-stream"
+            content_type="application/train_and_val/octet-stream",
         )
-    
+
     else:
         update_registered_converter(
             XGBRegressor,
@@ -105,88 +110,89 @@ def store_model_at_minio(
             convert_xgboost,
         )
 
-        initial_type = [('input', FloatTensorType([None, X_train.shape[1]]))]
+        initial_type = [("input", FloatTensorType([None, X_train.shape[1]]))]
         onnx_model = onnxmltools.convert_sklearn(
-            model=model,
-            initial_types=initial_type,
-            target_opset={'ai.onnx.ml': 3}
+            model=model, initial_types=initial_type, target_opset={"ai.onnx.ml": 3}
         )
         onnx_bytes = onnx_model.SerializeToString()
         onnx_buffer = io.BytesIO(onnx_bytes)
 
         minio_client.put_object(
             bucket_name=bucket,
-            object_name='/train_and_val/model.onnx',
+            object_name="/train_and_val/model.onnx",
             data=onnx_buffer,
             length=len(onnx_bytes),
-            content_type="application/train_and_val/octet-stream"
+            content_type="application/train_and_val/octet-stream",
         )
 
-    csv_buffer = io.StringIO() # A utilizar por todos los .csv
+    csv_buffer = io.StringIO()  # A utilizar por todos los .csv
 
-    np.savetxt(csv_buffer, X_train, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
+    np.savetxt(csv_buffer, X_train, delimiter=",")
+    csv_bytes = csv_buffer.getvalue().encode("utf-8")
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name='/train_and_val/X_train.csv',
+        object_name="/train_and_val/X_train.csv",
         data=csv_io,
         length=len(csv_bytes),
-        content_type='text/csv'
+        content_type="text/csv",
     )
 
-    np.savetxt(csv_buffer, X_val, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
+    np.savetxt(csv_buffer, X_val, delimiter=",")
+    csv_bytes = csv_buffer.getvalue().encode("utf-8")
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name='/train_and_val/X_val.csv',
+        object_name="/train_and_val/X_val.csv",
         data=csv_io,
         length=len(csv_bytes),
-        content_type='text/csv'
+        content_type="text/csv",
     )
 
-    np.savetxt(csv_buffer, y_train, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
+    np.savetxt(csv_buffer, y_train, delimiter=",")
+    csv_bytes = csv_buffer.getvalue().encode("utf-8")
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name='/train_and_val/y_train.csv',
+        object_name="/train_and_val/y_train.csv",
         data=csv_io,
         length=len(csv_bytes),
-        content_type='text/csv'
+        content_type="text/csv",
     )
 
-    np.savetxt(csv_buffer, y_val, delimiter=',')
-    csv_bytes = csv_buffer.getvalue().encode('utf-8')
+    np.savetxt(csv_buffer, y_val, delimiter=",")
+    csv_bytes = csv_buffer.getvalue().encode("utf-8")
     csv_io = io.BytesIO(csv_bytes)
     minio_client.put_object(
         bucket_name=bucket,
-        object_name='/train_and_val/y_val.csv',
+        object_name="/train_and_val/y_val.csv",
         data=csv_io,
         length=len(csv_bytes),
-        content_type='text/csv'
+        content_type="text/csv",
     )
 
-    serialized_model_params = json.dumps(params_).encode('utf-8')
+    serialized_model_params = json.dumps(params_).encode("utf-8")
     minio_client.put_object(
         bucket_name=bucket,
-        object_name='/train_and_val/model_params.json',
+        object_name="/train_and_val/model_params.json",
         data=io.BytesIO(serialized_model_params),
         length=len(serialized_model_params),
-        content_type='application/json'
+        content_type="application/json",
     )
 
-    serialized_model_metrics = json.dumps(model_metrics).encode('utf-8')
+    serialized_model_metrics = json.dumps(model_metrics).encode("utf-8")
     minio_client.put_object(
         bucket_name=bucket,
-        object_name='/train_and_val/model_metrics.json',
+        object_name="/train_and_val/model_metrics.json",
         data=io.BytesIO(serialized_model_metrics),
         length=len(serialized_model_metrics),
-        content_type='application/json'
+        content_type="application/json",
     )
-    
-def download_model_from_minio(minio_client: Minio, model: Literal['rfr', 'xgb'] = 'rfr') -> rt.InferenceSession: 
+
+
+def download_model_from_minio(
+    minio_client: Minio, model: Literal["rfr", "xgb"] = "rfr"
+) -> rt.InferenceSession:
     """
     Downloads an ONNX model from a MinIO bucket and loads it into an ONNX Runtime InferenceSession.
     :param minio_client: An instance of the Minio client used to interact with the MinIO object storage.
@@ -195,13 +201,19 @@ def download_model_from_minio(minio_client: Minio, model: Literal['rfr', 'xgb'] 
     :rtype: rt.InferenceSession
     :raises ValueError: If the specified model file is not found in the MinIO bucket.
     """
-    
-    bucket = os.environ.get('RFR_MINIO_BUCKET') if model == 'rfr' else os.environ.get('XGBOOST_BUCKET')
-        
+
+    bucket = (
+        os.environ.get("RFR_MINIO_BUCKET")
+        if model == "rfr"
+        else os.environ.get("XGBOOST_BUCKET")
+    )
+
     try:
-        onnx_model = minio_client.get_object(bucket_name=bucket, object_name='/train_and_val/model.onnx').data
+        onnx_model = minio_client.get_object(
+            bucket_name=bucket, object_name="/train_and_val/model.onnx"
+        ).data
     except error.S3Error:
-        raise ValueError('Model not found for /train_and_val/model.onnx')
-    infses = rt.InferenceSession(onnx_model, providers=['CPUExecutionProvider'])
-        
+        raise ValueError("Model not found for /train_and_val/model.onnx")
+    infses = rt.InferenceSession(onnx_model, providers=["CPUExecutionProvider"])
+
     return infses
