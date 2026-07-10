@@ -4,6 +4,7 @@ import glob
 import os
 from pathlib import Path
 
+
 def generate_traffic_data_file(path: Path) -> pl.DataFrame:
     """
     Generates or loads a traffic data file as a polars DataFrame.
@@ -18,7 +19,7 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
     """
 
     literal_path = "data/traffic/*.csv"
-    
+
     data = []
 
     columns = [
@@ -33,25 +34,38 @@ def generate_traffic_data_file(path: Path) -> pl.DataFrame:
         "periodo_integracion",
     ]
 
-    os.makedirs('data/traffic/', exist_ok=True)
-    
+    os.makedirs("data/traffic/", exist_ok=True)
+
     if not os.path.exists(path):
         print(f"El fichero no existe en {path}")
         try:
             for file in glob.glob(literal_path):
-                df = pl.read_csv(source=file, separator=';', has_header=True, columns=columns, null_values="NaN")
-                df = df.with_columns([
-                pl.col('fecha').str.split_exact(by=' ', n=1)
-                .struct.rename_fields(['fecha', 'hora'])
-                .alias('split')
-                ]).drop('fecha').unnest('split')
+                df = pl.read_csv(
+                    source=file,
+                    separator=";",
+                    has_header=True,
+                    columns=columns,
+                    null_values="NaN",
+                )
+                df = (
+                    df.with_columns(
+                        [
+                            pl.col("fecha")
+                            .str.split_exact(by=" ", n=1)
+                            .struct.rename_fields(["fecha", "hora"])
+                            .alias("split")
+                        ]
+                    )
+                    .drop("fecha")
+                    .unnest("split")
+                )
                 data.append(df)
 
             df = pl.concat(data).unique()
 
             new_columns = columns + ["hora"]
             df.select(new_columns).write_parquet(path)
-            
+
             return df
 
         except OSError as error:
@@ -71,13 +85,15 @@ def get_data_from_pmed_ubicacion_file(path: Path) -> pl.DataFrame:
     :rtype: pl.Dataframe
     """
 
-    columns = ['distrito', 'id']
+    columns = ["distrito", "id"]
     measure_points_data = pl.read_csv(
-        source=path, separator=';', has_header=True, encoding='utf8-lossy'
+        source=path, separator=";", has_header=True, encoding="utf8-lossy"
     )
-    df = measure_points_data.select(columns).filter(
-        pl.col('distrito') == 3.0
-        ).drop_nulls()
+    df = (
+        measure_points_data.select(columns)
+        .filter(pl.col("distrito") == 3.0)
+        .drop_nulls()
+    )
     return df
 
 
@@ -94,7 +110,7 @@ def merge_traffic_and_pmed_ubicacion_data(
     :return: Merged DataFrame containing data from both input DataFrames where 'id' matches.
     :rtype: pd.DataFrame
     """
-    df = pmed_data.join(other=traffic_data, on='id', how='left')
+    df = pmed_data.join(other=traffic_data, on="id", how="left")
     return df
 
 
@@ -110,9 +126,9 @@ def get_final_data(df: pd.DataFrame, aemet_data: pd.DataFrame, path: Path) -> No
     """
 
     if not os.path.exists(path):
-        df = df.join(other=aemet_data, on='fecha', how='left')
-        df = df.sort(by=['id', 'fecha', 'hora'], descending=False)
-        df = df.remove(pl.col('id') == 479309)
+        df = df.join(other=aemet_data, on="fecha", how="left")
+        df = df.sort(by=["id", "fecha", "hora"], descending=False)
+        df = df.remove(pl.col("id") == 479309)
         df.write_parquet(file=path)
-    
+
     return

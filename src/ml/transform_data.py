@@ -3,6 +3,7 @@ import polars as pl
 from pathlib import Path
 import os
 
+
 def raw_data_from_polars_dataframe(path: Path) -> pl.DataFrame:
     """
     Reads a CSV file into a Polars DataFrame, removes rows with null values, and returns the cleaned DataFrame.
@@ -15,6 +16,7 @@ def raw_data_from_polars_dataframe(path: Path) -> pl.DataFrame:
     df = pl.read_parquet(source=path)
     df = df.drop_nulls()
     return df
+
 
 def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     """
@@ -33,33 +35,43 @@ def transform_polars_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     :return: Transformed DataFrame with new columns and data types.
     :rtype: pl.DataFrame
     """
-    
-    df = df.with_columns([
-        pl.col('fecha').str.to_date('%Y-%m-%d').alias('fecha'),
-        pl.col('hora').str.to_time('%H:%M:%S').alias('hora'),
-        pl.col('prec').str.replace(',', '.').cast(pl.Float32).alias('prec')
-    ])
-    
-    df = df.with_columns([
-        pl.col('fecha').dt.year().alias('year'),
-        pl.col('fecha').dt.day().alias('day'),
-        pl.col('fecha').dt.weekday().alias('day_of_the_week')
-    ])
-        
-    
-    df = df.with_columns([
-        pl.col('day_of_the_week').is_in([5,6]).cast(pl.Int8).alias('is_weekend'),
 
-        (
-            (pl.col('day').is_in([6,8,25])) | 
-            ((pl.col("year") == 2024) & (pl.col("day") == 9))
-        ).cast(pl.Float32).alias('is_holiday'),
-         
-  ])
+    df = df.with_columns(
+        [
+            pl.col("fecha").str.to_date("%Y-%m-%d").alias("fecha"),
+            pl.col("hora").str.to_time("%H:%M:%S").alias("hora"),
+            pl.col("prec").str.replace(",", ".").cast(pl.Float32).alias("prec"),
+        ]
+    )
 
-    df = df.drop(['id', 'fecha', 'error', 'periodo_integracion']).remove(pl.col('tipo_elem') == 'C30').sort('year', 'day', 'hora', descending=[False, False, False])
+    df = df.with_columns(
+        [
+            pl.col("fecha").dt.year().alias("year"),
+            pl.col("fecha").dt.day().alias("day"),
+            pl.col("fecha").dt.weekday().alias("day_of_the_week"),
+        ]
+    )
+
+    df = df.with_columns(
+        [
+            pl.col("day_of_the_week").is_in([5, 6]).cast(pl.Int8).alias("is_weekend"),
+            (
+                (pl.col("day").is_in([6, 8, 25]))
+                | ((pl.col("year") == 2024) & (pl.col("day") == 9))
+            )
+            .cast(pl.Float32)
+            .alias("is_holiday"),
+        ]
+    )
+
+    df = (
+        df.drop(["id", "fecha", "error", "periodo_integracion"])
+        .remove(pl.col("tipo_elem") == "C30")
+        .sort("year", "day", "hora", descending=[False, False, False])
+    )
 
     return df
+
 
 def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
     """
@@ -74,19 +86,26 @@ def dataframe_to_parquet(df: pl.DataFrame, path: Path) -> pl.DataFrame:
     :rtype: pl.DataFrame
     """
 
-
     if not os.path.exists(path):
         df.write_parquet(file=path)
 
     df_ = pl.read_parquet(source=path)
     return df_
 
+
 def main_transform_data() -> pl.DataFrame:
-    raw_df = raw_data_from_polars_dataframe(path=Path('../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.parquet'))
+    raw_df = raw_data_from_polars_dataframe(
+        path=Path(
+            "../../../data-preprocessing/src/data_preprocessing/data/provisional_final_data.parquet"
+        )
+    )
     df_transformed = transform_polars_dataframe(raw_df)
-    df_parquet = dataframe_to_parquet(df=df_transformed, path=Path('datasets/final_data.parquet'))
+    df_parquet = dataframe_to_parquet(
+        df=df_transformed, path=Path("datasets/final_data.parquet")
+    )
     print(df_parquet)
     print(df_parquet.shape)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main_transform_data()
