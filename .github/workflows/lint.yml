@@ -1,14 +1,12 @@
 name: 'Lint Python Code' # La pipeline tiene que tener un nombre
 on: # Cuándo se va a activar
   push: # Only execute pipeline when someone pushes a commit to these branches
-    branches:
-      - main
+    branches: [ "main", "dev" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main", "dev" ]
 
 jobs:
-  lint: # Name of the job
+  quality-check: # Name of the job
     runs-on: ubuntu-latest
     steps: # Cada guión es un step
       - uses: actions/checkout@v4 # @v_numero es la versión
