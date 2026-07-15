@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from obtaining_data import (
+from ETL.extract.obtaining_data import (
     generate_traffic_data_file,
     get_data_from_pmed_ubicacion_file,
     merge_traffic_and_pmed_ubicacion_data,
     get_final_data,
 )
 
-from aemet_client import get_precipitation_data_from_aemet
+from ETL.extract.aemet_client import get_precipitation_data_from_aemet
 
 
 def main():
