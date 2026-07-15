@@ -1,11 +1,8 @@
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-import os
 import structlog
-import polars as pl
 import requests
-from pathlib import Path
 
 from src.common.settings import settings
 
