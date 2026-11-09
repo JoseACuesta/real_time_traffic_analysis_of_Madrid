@@ -1,8 +1,8 @@
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
-import structlog
 import requests
+import structlog
+from dateutil.relativedelta import relativedelta
 
 from src.common.settings import settings
 
@@ -19,7 +19,6 @@ def get_precipitation_data_from_aemet(start_date: datetime, end_date: datetime) 
     IDEMA = settings.aemet_station_idema
     headers = {"Accept": "Application/json", "api_key": API_KEY}
 
-
     while start_date < end_date:
         if start_date.year == 2020:
             logger.info("Skipping 2020 due to COVID")
@@ -27,8 +26,7 @@ def get_precipitation_data_from_aemet(start_date: datetime, end_date: datetime) 
             continue
 
         chunk_end_date = min(
-            start_date + relativedelta(months=6) - relativedelta(days=1),
-            end_date
+            start_date + relativedelta(months=6) - relativedelta(days=1), end_date
         )
 
         start_date_parse = start_date.strftime("%Y-%m-%dT%H:%M:%SUTC")
@@ -36,10 +34,14 @@ def get_precipitation_data_from_aemet(start_date: datetime, end_date: datetime) 
 
         ENDPOINT: str = f"/api/valores/climatologicos/diarios/datos/fechaini/{start_date_parse}/fechafin/{end_date_parse}/estacion/{IDEMA}"
         URL: str = BASE_URL + ENDPOINT
-        
+
         try:
             response = requests.get(url=URL, headers=headers, timeout=30)
-            logger.info("Fetching data from AEMET API", start_date=start_date, end_date=chunk_end_date)
+            logger.info(
+                "Fetching data from AEMET API",
+                start_date=start_date,
+                end_date=chunk_end_date,
+            )
             response.raise_for_status()
             response_json = response.json()
 
@@ -51,13 +53,13 @@ def get_precipitation_data_from_aemet(start_date: datetime, end_date: datetime) 
                 weather_data = response_data.json()
                 list_aemet_data.extend(weather_data)
                 logger.info("Data added succesfully ", data=len(weather_data))
-            
+
             except requests.exceptions.RequestException as e:
                 logger.exception(
                     "Connection error",
                     start_date=start_date_parse,
                     end_date=chunk_end_date,
-                    error=str(e)
+                    error=str(e),
                 )
 
         except Exception as e:
@@ -65,11 +67,9 @@ def get_precipitation_data_from_aemet(start_date: datetime, end_date: datetime) 
                 "Error while fetching data",
                 start_date=start_date_parse,
                 end_date=chunk_end_date,
-                error=str(e)
+                error=str(e),
             )
-        
+
         start_date = chunk_end_date + relativedelta(days=1)
-    
+
     return list_aemet_data
-
-
