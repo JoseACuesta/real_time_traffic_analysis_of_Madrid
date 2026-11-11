@@ -11,20 +11,13 @@ logger = structlog.get_logger(__name__)
 def extract_historical_traffic_data_from_open_data(file_id: int) -> zipfile.ZipFile:
 
     for i in range(1, file_id + 1):
-        if i < 153:
-            BASE_URL = f"https://datos.madrid.es/dataset/208627-0-transporte-ptomedida-historico/resource/208627-{file_id}-transporte-ptomedida-historico-zip/"
-            DOWNLOAD_PATH_URL = (
-                f"download/208627-{file_id}-transporte-ptomedida-historico-zip.zip"
-            )
-            FULL_URL = urljoin(BASE_URL, DOWNLOAD_PATH_URL)
-            logger.info(f"Full URL: {FULL_URL}")
-        else:
-            BASE_URL = f"https://datos.madrid.es/dataset/208627-0-transporte-ptomedida-historico/resource/208627-{file_id}-transporte-ptomedida-historico/"
-            DOWNLOAD_PATH_URL = (
-                f"download/208627-{file_id}-transporte-ptomedida-historico.zip"
-            )
-            FULL_URL = urljoin(BASE_URL, DOWNLOAD_PATH_URL)
-            logger.info(f"Full URL: {FULL_URL}")
+        suffix = "-zip" if i < 153 else ""
+        BASE_URL = f"https://datos.madrid.es/dataset/208627-0-transporte-ptomedida-historico/resource/208627-{i}-transporte-ptomedida-historico{suffix}/"
+        DOWNLOAD_PATH_URL = (
+            f"download/208627-{i}-transporte-ptomedida-historico{suffix}.zip"
+        )
+        FULL_URL = urljoin(BASE_URL, DOWNLOAD_PATH_URL)
+        logger.info(f"Full URL: {FULL_URL}")
 
         try:
             response = requests.get(url=FULL_URL)
